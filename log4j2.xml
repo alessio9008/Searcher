@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+<!--        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{DEFAULT} %-5level - %msg%n"/>
+        </Console>-->
+        <RollingFile name="searcher" fileName="searcher.log" filePattern="searcher_%d{yyyy-MM-dd}.log">
+            <PatternLayout>
+                <pattern>%d{DEFAULT} %-5level [%-t] [%c{1}] - %msg%n</pattern>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            </Policies>
+        </RollingFile>
+    </Appenders>
+    <Loggers>
+        <Root level="debug">
+<!--            <AppenderRef ref="console"/>-->
+            <AppenderRef ref="searcher"/>
+        </Root>
+    </Loggers>
+</Configuration>
