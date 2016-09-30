@@ -20,7 +20,7 @@ public class PathConverter extends AbstractSingleValueConverter {
         if (type != null) {
             try {
                 return Path.class.isAssignableFrom(type);
-            } catch (Throwable ex) {
+            } catch (Exception ex) {
                 return false;
             }
         }
@@ -32,7 +32,7 @@ public class PathConverter extends AbstractSingleValueConverter {
         if (string != null) {
             try {
                 return Paths.get(string);
-            } catch (Throwable ex) {
+            } catch (Exception ex) {
                 return null;
             }
         }

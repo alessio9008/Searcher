@@ -54,11 +54,11 @@ public class ScanDirectory extends SimpleFileVisitor<Path> {
     @Override
     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
         try {
-            if (checkFileAttribute(attrs, file)){
+            if (checkFileAttribute(attrs, file)) {
                 return FileVisitResult.CONTINUE;
             }
             scanFileName(file);
-        } catch (Throwable ex) {
+        } catch (Exception ex) {
             return FileVisitResult.CONTINUE;
         }
         return FileVisitResult.CONTINUE;
@@ -74,7 +74,7 @@ public class ScanDirectory extends SimpleFileVisitor<Path> {
         executor.execute(new FileScanRunnable(fileRoot, bufferSize, archiveScan, outputSeparateFile));
         LOGGER.info("file da scansionare = " + file.toAbsolutePath().toString());
     }
-    
+
     private void scanFileName(Path file) throws InterruptedException {
         if (rootSearch.getSearchFileName().isRegex()) {
             checkFileNameWithRegex(file);
@@ -82,7 +82,7 @@ public class ScanDirectory extends SimpleFileVisitor<Path> {
             checkFileNameWithoutRegex(file);
         }
     }
-    
+
     private boolean checkFileAttribute(BasicFileAttributes attrs, Path file) {
         if (checkTime(attrs, file)) {
             return true;
@@ -100,7 +100,7 @@ public class ScanDirectory extends SimpleFileVisitor<Path> {
             checkFileNameWithoutRegexCaseInsensitive(file);
         }
     }
-    
+
     private void checkFileNameWithoutRegexCaseInsensitive(Path file) throws InterruptedException {
         if (file.getFileName().toString().equalsIgnoreCase(rootSearch.getSearchFileName().getToSearch())) {
             putFile(file);
@@ -122,13 +122,19 @@ public class ScanDirectory extends SimpleFileVisitor<Path> {
     }
 
     private boolean checkArchive(Path file) {
-        if (!archiveScan && Utils.checkZipFile(file)) {
-            LOGGER.debug("file scartato = " + file.toAbsolutePath().toString());
-            return true;
-        }
-        if (!archiveScan && Utils.checkRarFile(file)) {
-            LOGGER.debug("file scartato = " + file.toAbsolutePath().toString());
-            return true;
+        if (!archiveScan) {
+            if (Utils.checkZipFile(file)) {
+                LOGGER.debug("file scartato = " + file.toAbsolutePath().toString());
+                return true;
+            }
+            if (Utils.checkGzipFile(file)) {
+                LOGGER.debug("file scartato = " + file.toAbsolutePath().toString());
+                return true;
+            }
+            if (Utils.checkRarFile(file)) {
+                LOGGER.debug("file scartato = " + file.toAbsolutePath().toString());
+                return true;
+            }
         }
         return false;
     }

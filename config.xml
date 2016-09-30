@@ -1,9 +1,9 @@
-<config scanzip="true">
+<config archiveScan="true">
   <poolconfig>
     <minPoolSize>5</minPoolSize>
-    <maxPoolSize>30</maxPoolSize>
+    <maxPoolSize>50</maxPoolSize>
     <idleTimeOut>5000</idleTimeOut>
-    <maxQueueSize>2147483647</maxQueueSize>
+    <maxQueueSize>10000</maxQueueSize>
   </poolconfig>
   <ioconfig>
     <bufferReaderSize>524288</bufferReaderSize>
@@ -13,20 +13,20 @@
 <!--    <outputMode class="OutputCommonFile" outputFilePath="/media/alessio/B2382A78382A3BAB/Searcher/outputDir/result.txt"/>-->
   </ioconfig>
   <searchItems>
-    <fileRoot rootPath="C:\Users\Alessio\Desktop\SSLScan-1.8.2-win-r7.zip" printMode="ABSOLUTE">
+    <!--<fileRoot rootPath="C:\Users\Alessio\Desktop\SSLScan-1.8.2-win-r7.zip" printMode="ABSOLUTE">
       <searchText regex="true" caseSensitive="false">
         <toSearch>.*</toSearch>
       </searchText>
-    </fileRoot>
-<!--    <directoryRoot rootPath="/media/alessio/B2382A78382A3BAB/Searcher/test" printMode="FILENAME">
+    </fileRoot>-->
+    <directoryRoot rootPath="C:/Users/Alessio/Desktop/test" printMode="FILENAME">
       <searchText regex="false" caseSensitive="false">
-        <toSearch>test</toSearch>
+        <toSearch>gz</toSearch>
       </searchText>
       <searchFileName regex="true" caseSensitive="false">
         <toSearch>.*</toSearch>
       </searchFileName>
-      <lastModifiedTimeIterval minTimestamp="2016-02-04 21:46:28.298" maxTimestamp="2016-02-05 12:46:28.298"/>
-      <creationTimeIterval minTimestamp="2016-02-06 21:46:28.298" maxTimestamp="2016-02-07 12:46:28.298"/>
-    </directoryRoot>-->
+<!--      <lastModifiedTimeIterval minTimestamp="2016-02-04 21:46:28.298" maxTimestamp="2016-02-05 12:46:28.298"/>
+      <creationTimeIterval minTimestamp="2016-02-06 21:46:28.298" maxTimestamp="2016-02-07 12:46:28.298"/>-->
+    </directoryRoot>
   </searchItems>
 </config>

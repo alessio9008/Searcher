@@ -114,7 +114,7 @@ public class Searcher {
                 fw = new FileWriter(new File(CONFIGFILE), false);
                 buff = new BufferedWriter(fw);
                 xstream.toXML(config, buff);
-            } catch (Throwable ex) {
+            } catch (Exception ex) {
                 LOGGER.error(ex.getMessage(), ex);
             } finally {
                 if (fw != null) {
@@ -125,7 +125,7 @@ public class Searcher {
                 }
             }
             LOGGER.info("file di esempio scritto");
-        } catch (Throwable ex) {
+        } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
         }
     }
@@ -142,7 +142,7 @@ public class Searcher {
                     fr = new FileReader(path.toFile());
                     reader = new BufferedReader(fr);
                     result = xstream.fromXML(reader);
-                } catch (Throwable ex) {
+                } catch (Exception ex) {
                     LOGGER.error(ex.getMessage(), ex);
                 } finally {
                     if (fr != null) {
@@ -165,7 +165,7 @@ public class Searcher {
                             System.setOut(new PrintStream(outputStream));
                             System.setErr(new PrintStream(outputStream));
                             LOGGER.info("output redirect to = " + outputCommonFile.getOutputFilePath().toAbsolutePath().toString());
-                        } catch (Throwable ex) {
+                        } catch (Exception ex) {
                             LOGGER.error(ex.getMessage(), ex);
                         }
                     }
@@ -184,7 +184,7 @@ public class Searcher {
                                 executor.execute(new FileScanRunnable(FileRootSearch.class.cast(searchItem), configuration.getIoconfig().getBufferReaderSize(), configuration.isArchiveScan(), outputMode));
                                 LOGGER.info("file da scansionare = " + searchItem.getPath().toAbsolutePath().toString());
                             }
-                        } catch (Throwable ex) {
+                        } catch (Exception ex) {
                             continue;
                         }
                     }
@@ -195,7 +195,7 @@ public class Searcher {
             } else {
                 LOGGER.error("file di configurazione non valido");
             }
-        } catch (Throwable ex) {
+        } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
         }
     }

@@ -29,7 +29,7 @@ public class TimestampConverter extends AbstractSingleValueConverter {
             else{
                 return false;
             }
-        } catch (Throwable ex) {
+        } catch (Exception ex) {
             return false;
         }
     }
@@ -46,7 +46,7 @@ public class TimestampConverter extends AbstractSingleValueConverter {
                 }
             }
             return null;
-        } catch (Throwable ex) {
+        } catch (Exception ex) {
             return null;
         }
     }
@@ -57,7 +57,7 @@ public class TimestampConverter extends AbstractSingleValueConverter {
             if (obj instanceof Calendar) {
                 return new SimpleDateFormat(Timestamp.SDF_FORMAT).format(Calendar.class.cast(obj).getTime());
             }
-        } catch (Throwable ex) {
+        } catch (Exception ex) {
             return null;
         }
         return null;

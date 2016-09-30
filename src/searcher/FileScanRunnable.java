@@ -32,6 +32,7 @@ import com.github.junrar.rarfile.FileHeader;
 
 import config.FileRootSearch;
 import config.OutputSeparateFile;
+import java.util.zip.GZIPInputStream;
 
 /**
  *
@@ -60,7 +61,7 @@ public class FileScanRunnable implements Runnable {
     public void run() {
         try {
             scanFile();
-        } catch (Throwable ex) {
+        } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
         } finally {
             finallyMethod();
@@ -68,17 +69,24 @@ public class FileScanRunnable implements Runnable {
     }
 
     private void scanFile() throws IOException {
-        if (archiveScan && Utils.checkZipFile(fileRootSearch.getPath())) {
-            LOGGER.info("il file " + fileRootSearch.getPath().toAbsolutePath().toString() + " sara scanzionato come file zip");
-            scanZipFile();
+        if (archiveScan) {
+            if (Utils.checkZipFile(fileRootSearch.getPath())) {
+                LOGGER.info("il file " + fileRootSearch.getPath().toAbsolutePath().toString() + " sara scanzionato come file zip");
+                scanZipFile();
+                return;
+            } else if (Utils.checkGzipFile(fileRootSearch.getPath())) {
+                LOGGER.info("il file " + fileRootSearch.getPath().toAbsolutePath().toString() + " sara scanzionato come file Gzip");
+                scanGzipFile();
+                return;
+            } else if (Utils.checkRarFile(fileRootSearch.getPath())) {
+                LOGGER.info("il file " + fileRootSearch.getPath().toAbsolutePath().toString() + " sara scanzionato come file rar");
+                scanRarFile();
+                return;
+            }
         }
-        if (archiveScan && Utils.checkRarFile(fileRootSearch.getPath())) {
-            LOGGER.info("il file " + fileRootSearch.getPath().toAbsolutePath().toString() + " sara scanzionato come file rar");
-            scanRarFile();
-        } else {
-            LOGGER.info("il file " + fileRootSearch.getPath().toAbsolutePath().toString() + " sarà processato come file di testo");
-            scanTextFile();
-        }
+        LOGGER.info("il file " + fileRootSearch.getPath().toAbsolutePath().toString() + " sarà processato come file di testo");
+        scanTextFile();
+
     }
 
     private void finallyMethod() {
@@ -107,14 +115,14 @@ public class FileScanRunnable implements Runnable {
                         reader = new BufferedReader(inReader, bufferReaderSize);
                         scanFile(reader);
                     }
-                } catch (Throwable ex) {
+                } catch (Exception ex) {
                     LOGGER.error(ex.getMessage(), ex);
                 } finally {
                     fileHeader = archive.nextFileHeader();
                     closeRarHeaderFile(inRar, inReader, reader);
                 }
             }
-        } catch (Throwable ex) {
+        } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
         } finally {
             closeRarArchive(archive);
@@ -125,7 +133,7 @@ public class FileScanRunnable implements Runnable {
         if (archive != null) {
             try {
                 archive.close();
-            } catch (Throwable ex) {
+            } catch (Exception ex) {
                 LOGGER.error(ex.getMessage(), ex);
             }
         }
@@ -150,7 +158,7 @@ public class FileScanRunnable implements Runnable {
             fileReader = new FileReader(fileRootSearch.getPath().toFile());
             reader = new BufferedReader(fileReader, bufferReaderSize);
             scanFile(reader);
-        } catch (Throwable ex) {
+        } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
         } finally {
             closeFile(fileReader, reader);
@@ -165,6 +173,29 @@ public class FileScanRunnable implements Runnable {
             reader.close();
         }
     }
+
+    private void scanGzipFile() throws IOException {
+        InputStream filein = null;
+        BufferedInputStream bin = null;
+        GZIPInputStream gzin = null;
+        InputStreamReader isr = null;
+        BufferedReader reader = null;
+        try {
+            filein = Files.newInputStream(fileRootSearch.getPath());
+            bin = new BufferedInputStream(filein, bufferReaderSize);
+            gzin = new GZIPInputStream(bin, bufferReaderSize);
+            isr = new InputStreamReader(gzin);
+            reader = new BufferedReader(isr, bufferReaderSize);
+            scanFile(reader);
+        } catch (Exception ex) {
+            LOGGER.error(ex.getMessage(), ex);
+        } finally {
+            closeGzip(gzin, bin, filein, reader, isr);
+
+        }
+    }
+
+   
 
     private void scanZipFile() throws IOException {
         InputStream filein = null;
@@ -184,14 +215,14 @@ public class FileScanRunnable implements Runnable {
                         reader = new BufferedReader(isr, bufferReaderSize);
                         scanFile(reader);
                     }
-                } catch (Throwable ex) {
+                } catch (Exception ex) {
                     LOGGER.error(ex.getMessage(), ex);
                 } finally {
                     ze = zin.getNextEntry();
                     closeEntryFile(reader, isr);
                 }
             }
-        } catch (Throwable ex) {
+        } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
         } finally {
             closeZip(zin, bin, filein);
@@ -207,6 +238,24 @@ public class FileScanRunnable implements Runnable {
         }
     }
 
+     private void closeGzip(GZIPInputStream gzin, BufferedInputStream bin, InputStream filein, BufferedReader reader, InputStreamReader isr) throws IOException {
+        if (gzin != null) {
+            gzin.close();
+        }
+        if (bin != null) {
+            bin.close();
+        }
+        if (filein != null) {
+            filein.close();
+        }
+        if (reader != null) {
+            reader.close();
+        }
+        if (isr != null) {
+            isr.close();
+        }
+    }
+    
     private void closeZip(ZipInputStream zin, BufferedInputStream bin, InputStream filein) throws IOException {
         if (zin != null) {
             zin.close();
@@ -235,7 +284,7 @@ public class FileScanRunnable implements Runnable {
                 } else {
                     checkTextInLine(line);
                 }
-            } catch (Throwable ex) {
+            } catch (Exception ex) {
                 LOGGER.error(ex.getMessage(), ex);
             }
             line = reader.readLine();
@@ -305,7 +354,7 @@ public class FileScanRunnable implements Runnable {
                 out = new PrintWriter(bufferedWriter);
                 separateFile = true;
                 LOGGER.info("il risultato della ricerca nel file = " + fileRootSearch.getPath().toAbsolutePath().toString() + " verra' scritto nel file = " + file.toAbsolutePath().toString());
-            } catch (Throwable ex) {
+            } catch (Exception ex) {
                 LOGGER.error(ex.getMessage(), ex);
             }
         }
