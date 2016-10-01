@@ -8,7 +8,6 @@ package config;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 import com.thoughtworks.xstream.annotations.XStreamConverter;
-import converter.PathConverter;
 import converter.TimestampConverter;
 import custom.Timestamp;
 import java.io.Serializable;

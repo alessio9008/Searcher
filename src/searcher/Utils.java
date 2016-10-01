@@ -11,7 +11,7 @@ import custom.Timestamp;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
-import java.io.FileInputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
@@ -29,35 +29,21 @@ public class Utils {
     private static final Logger LOGGER = LogManager.getLogger(Utils.class);
 
     public static boolean checkGzipFile(Path file) {
-        DataInputStream in = null;
-        BufferedInputStream bin = null;
-        FileInputStream fin = null;
-        try {
-            fin = new FileInputStream(file.toFile());
-            bin = new BufferedInputStream(fin);
-            in = new DataInputStream(bin);
+        boolean result = false;
+        try (DataInputStream in = new DataInputStream(new BufferedInputStream(Files.newInputStream(file)))) {;
             int test = in.readShort();
-            boolean result = test == FileSignature.Gzip.GZIPFILEHEADER;
+            result = test == FileSignature.Gzip.GZIPFILEHEADER;
             if (!result) {
                 LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non è gzip");
             }
-            return result;
         } catch (Exception ex) {
             LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non è gzip");
-            return false;
-        } finally {
-            close(in, bin, fin);
         }
+        return result;
     }
 
     public static boolean checkZipFile(Path file) {
-        DataInputStream in = null;
-        BufferedInputStream bin = null;
-        FileInputStream fin = null;
-        try {
-            fin = new FileInputStream(file.toFile());
-            bin = new BufferedInputStream(fin);
-            in = new DataInputStream(bin);
+        try (DataInputStream in = new DataInputStream(new BufferedInputStream(Files.newInputStream(file)))) {
             int test = in.readInt();
             boolean result = test == FileSignature.Zip.ZIPFILEHEADER;
             if (!result) {
@@ -67,19 +53,11 @@ public class Utils {
         } catch (Exception ex) {
             LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non è zip");
             return false;
-        } finally {
-            close(in, bin, fin);
         }
     }
 
     public static boolean checkRarFile(Path file) {
-        DataInputStream in = null;
-        BufferedInputStream bin = null;
-        FileInputStream fin = null;
-        try {
-            fin = new FileInputStream(file.toFile());
-            bin = new BufferedInputStream(fin);
-            in = new DataInputStream(bin);
+        try (DataInputStream in = new DataInputStream(new BufferedInputStream(Files.newInputStream(file)))) {
             byte data[] = new byte[8];
             int len = in.read(data);
             boolean result = (len == 8 && equalsRar(data));
@@ -90,9 +68,7 @@ public class Utils {
         } catch (Exception ex) {
             LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non è rar");
             return false;
-        } finally {
-            close(in, bin, fin);
-        }
+        } 
     }
 
     private static boolean equalsRar(byte[] data) {
@@ -146,28 +122,5 @@ public class Utils {
         return new SimpleDateFormat(Timestamp.SDF_FORMAT).format(timestamp.getTime());
     }
 
-    private static void close(DataInputStream in, BufferedInputStream bin, FileInputStream fin) {
-        if (in != null) {
-            try {
-                in.close();
-            } catch (Exception ex) {
-                LOGGER.error(ex.getMessage(), ex);
-            }
-        }
-        if (bin != null) {
-            try {
-                bin.close();
-            } catch (Exception ex) {
-                LOGGER.error(ex.getMessage(), ex);
-            }
-        }
-        if (fin != null) {
-            try {
-                fin.close();
-            } catch (Exception ex) {
-                LOGGER.error(ex.getMessage(), ex);
-            }
-        }
-    }
 
 }

@@ -9,9 +9,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
@@ -100,171 +98,60 @@ public class FileScanRunnable implements Runnable {
     }
 
     private void scanRarFile() {
-        Archive archive = null;
-        try {
-            archive = new Archive(new FileVolumeManager(fileRootSearch.getPath().toFile()));
+        try (Archive archive = new Archive(new FileVolumeManager(fileRootSearch.getPath().toFile()))) {
             FileHeader fileHeader = archive.nextFileHeader();
             while (fileHeader != null) {
-                InputStream inRar = null;
-                InputStreamReader inReader = null;
-                BufferedReader reader = null;
                 try {
                     if (!fileHeader.isDirectory()) {
-                        inRar = archive.getInputStream(fileHeader);
-                        inReader = new InputStreamReader(inRar);
-                        reader = new BufferedReader(inReader, bufferReaderSize);
-                        scanFile(reader);
+                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(archive.getInputStream(fileHeader)), bufferReaderSize)) {
+                            scanFile(reader);
+                        }
                     }
                 } catch (Exception ex) {
                     LOGGER.error(ex.getMessage(), ex);
                 } finally {
                     fileHeader = archive.nextFileHeader();
-                    closeRarHeaderFile(inRar, inReader, reader);
                 }
             }
         } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
-        } finally {
-            closeRarArchive(archive);
-        }
-    }
-
-    private void closeRarArchive(Archive archive) {
-        if (archive != null) {
-            try {
-                archive.close();
-            } catch (Exception ex) {
-                LOGGER.error(ex.getMessage(), ex);
-            }
-        }
-    }
-
-    private void closeRarHeaderFile(InputStream inRar, InputStreamReader inReader, BufferedReader reader) throws IOException {
-        if (inRar != null) {
-            inRar.close();
-        }
-        if (inReader != null) {
-            inReader.close();
-        }
-        if (reader != null) {
-            reader.close();
         }
     }
 
     private void scanTextFile() throws IOException {
-        FileReader fileReader = null;
-        BufferedReader reader = null;
-        try {
-            fileReader = new FileReader(fileRootSearch.getPath().toFile());
-            reader = new BufferedReader(fileReader, bufferReaderSize);
+        try (BufferedReader reader = new BufferedReader(Files.newBufferedReader(fileRootSearch.getPath(), StandardCharsets.UTF_8), bufferReaderSize)) {
             scanFile(reader);
         } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
-        } finally {
-            closeFile(fileReader, reader);
-        }
-    }
-
-    private void closeFile(FileReader fileReader, BufferedReader reader) throws IOException {
-        if (fileReader != null) {
-            fileReader.close();
-        }
-        if (reader != null) {
-            reader.close();
         }
     }
 
     private void scanGzipFile() throws IOException {
-        InputStream filein = null;
-        BufferedInputStream bin = null;
-        GZIPInputStream gzin = null;
-        InputStreamReader isr = null;
-        BufferedReader reader = null;
-        try {
-            filein = Files.newInputStream(fileRootSearch.getPath());
-            bin = new BufferedInputStream(filein, bufferReaderSize);
-            gzin = new GZIPInputStream(bin, bufferReaderSize);
-            isr = new InputStreamReader(gzin);
-            reader = new BufferedReader(isr, bufferReaderSize);
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new BufferedInputStream(Files.newInputStream(fileRootSearch.getPath()), bufferReaderSize), bufferReaderSize)), bufferReaderSize)) {
             scanFile(reader);
         } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
-        } finally {
-            closeGzip(gzin, bin, filein, reader, isr);
-
         }
     }
 
-   
-
     private void scanZipFile() throws IOException {
-        InputStream filein = null;
-        BufferedInputStream bin = null;
-        ZipInputStream zin = null;
-        try {
-            filein = Files.newInputStream(fileRootSearch.getPath());
-            bin = new BufferedInputStream(filein, bufferReaderSize);
-            zin = new ZipInputStream(bin);
-            ZipEntry ze = zin.getNextEntry();
-            while (ze != null) {
-                InputStreamReader isr = null;
-                BufferedReader reader = null;
-                try {
-                    if (!ze.isDirectory()) {
-                        isr = new InputStreamReader(zin);
-                        reader = new BufferedReader(isr, bufferReaderSize);
-                        scanFile(reader);
+        try (ZipInputStream zin = new ZipInputStream(new BufferedInputStream(Files.newInputStream(fileRootSearch.getPath()), bufferReaderSize))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(zin), bufferReaderSize)) {
+                ZipEntry ze = zin.getNextEntry();
+                while (ze != null) {
+                    try {
+                        if (!ze.isDirectory()) {
+                            scanFile(reader);
+                        }
+                    } catch (Exception ex) {
+                        LOGGER.error(ex.getMessage(), ex);
+                    } finally {
+                        ze = zin.getNextEntry();
                     }
-                } catch (Exception ex) {
-                    LOGGER.error(ex.getMessage(), ex);
-                } finally {
-                    ze = zin.getNextEntry();
-                    closeEntryFile(reader, isr);
                 }
             }
         } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
-        } finally {
-            closeZip(zin, bin, filein);
-        }
-    }
-
-    private void closeEntryFile(BufferedReader reader, InputStreamReader isr) throws IOException {
-        if (reader != null) {
-            reader.close();
-        }
-        if (isr != null) {
-            isr.close();
-        }
-    }
-
-     private void closeGzip(GZIPInputStream gzin, BufferedInputStream bin, InputStream filein, BufferedReader reader, InputStreamReader isr) throws IOException {
-        if (gzin != null) {
-            gzin.close();
-        }
-        if (bin != null) {
-            bin.close();
-        }
-        if (filein != null) {
-            filein.close();
-        }
-        if (reader != null) {
-            reader.close();
-        }
-        if (isr != null) {
-            isr.close();
-        }
-    }
-    
-    private void closeZip(ZipInputStream zin, BufferedInputStream bin, InputStream filein) throws IOException {
-        if (zin != null) {
-            zin.close();
-        }
-        if (bin != null) {
-            bin.close();
-        }
-        if (filein != null) {
-            filein.close();
         }
     }
 

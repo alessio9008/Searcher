@@ -18,9 +18,9 @@
         <toSearch>.*</toSearch>
       </searchText>
     </fileRoot>-->
-    <directoryRoot rootPath="C:/Users/Alessio/Desktop/test" printMode="FILENAME">
-      <searchText regex="false" caseSensitive="false">
-        <toSearch>gz</toSearch>
+    <directoryRoot rootPath="C:/Users/Alessio/Desktop/archiveonly" printMode="FILENAME">
+      <searchText regex="true" caseSensitive="false">
+        <toSearch>.*</toSearch>
       </searchText>
       <searchFileName regex="true" caseSensitive="false">
         <toSearch>.*</toSearch>

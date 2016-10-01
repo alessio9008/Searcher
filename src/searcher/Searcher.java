@@ -23,17 +23,14 @@ import custom.Timestamp;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -53,7 +50,7 @@ public class Searcher {
     private static final String CONFIGFILE;
 
     static {
-        CONFIGFILE = System.getProperty("config.file","config.xml");
+        CONFIGFILE = System.getProperty("config.file", "config.xml");
         if (System.getProperty("log4j.configurationFile") == null) {
             System.setProperty("log4j.configurationFile", "log4j2.xml");
         }
@@ -93,9 +90,9 @@ public class Searcher {
 
     private static void initExample(XStream xstream) {
         try {
-            List<SearchItem> searchItems = Collections.synchronizedList(new ArrayList<SearchItem>());
+            List<SearchItem> searchItems = new ArrayList<SearchItem>();
             ThreadPoolConfig thePoolConfig = new ThreadPoolConfig(5, 30, 5000, Integer.MAX_VALUE);
-            OutputMode mode=null;
+            OutputMode mode = null;
             //mode = new OutputCommonFile(Paths.get("outputExample.txt"));
             //mode=new OutputSeparateFile(Paths.get("outputDir"), "result");
             IOConfig ioconfig = new IOConfig(524288, mode);
@@ -108,21 +105,10 @@ public class Searcher {
             DirectoryRootSearch directoryRootSearch = new DirectoryRootSearch(Paths.get(""), new SearchConfig(false, true, "textTest"), timeIntervall, new SearchConfig(false, true, "textFileNameTest"), PrintMode.FILENAME, TimeIntervall.class.cast(timeIntervall.clone()));
             searchItems.add(fileRoot);
             searchItems.add(directoryRootSearch);
-            FileWriter fw = null;
-            BufferedWriter buff = null;
-            try {
-                fw = new FileWriter(new File(CONFIGFILE), false);
-                buff = new BufferedWriter(fw);
+            try (BufferedWriter buff = Files.newBufferedWriter(Paths.get(CONFIGFILE), StandardCharsets.UTF_8,StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
                 xstream.toXML(config, buff);
             } catch (Exception ex) {
                 LOGGER.error(ex.getMessage(), ex);
-            } finally {
-                if (fw != null) {
-                    fw.close();
-                }
-                if (buff != null) {
-                    buff.close();
-                }
             }
             LOGGER.info("file di esempio scritto");
         } catch (Exception ex) {
@@ -135,22 +121,11 @@ public class Searcher {
             Path path = Paths.get(CONFIGFILE);
             if (Files.exists(path) && !Files.isDirectory(path) && Files.isReadable(path)) {
                 Config configuration = null;
-                FileReader fr = null;
-                BufferedReader reader = null;
                 Object result = null;
-                try {
-                    fr = new FileReader(path.toFile());
-                    reader = new BufferedReader(fr);
+                try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
                     result = xstream.fromXML(reader);
                 } catch (Exception ex) {
                     LOGGER.error(ex.getMessage(), ex);
-                } finally {
-                    if (fr != null) {
-                        fr.close();
-                    }
-                    if (reader != null) {
-                        reader.close();
-                    }
                 }
                 if (result instanceof Config) {
                     configuration = Config.class.cast(result);
@@ -168,8 +143,7 @@ public class Searcher {
                         } catch (Exception ex) {
                             LOGGER.error(ex.getMessage(), ex);
                         }
-                    }
-                    else if (configuration.getIoconfig().getOutputMode() instanceof OutputSeparateFile) {
+                    } else if (configuration.getIoconfig().getOutputMode() instanceof OutputSeparateFile) {
                         outputMode = OutputSeparateFile.class.cast(configuration.getIoconfig().getOutputMode());
                         LOGGER.info("output in file separati");
                     }
@@ -177,10 +151,9 @@ public class Searcher {
                     for (SearchItem searchItem : configuration.getSearchItems().getSearchItems()) {
                         try {
                             if (searchItem instanceof DirectoryRootSearch) {
-                                ScanDirectory scanDirectory = new ScanDirectory(DirectoryRootSearch.class.cast(searchItem), executor, configuration.isArchiveScan(), configuration.getIoconfig().getBufferReaderSize(),outputMode);
+                                ScanDirectory scanDirectory = new ScanDirectory(DirectoryRootSearch.class.cast(searchItem), executor, configuration.isArchiveScan(), configuration.getIoconfig().getBufferReaderSize(), outputMode);
                                 Files.walkFileTree(searchItem.getPath(), scanDirectory);
                             } else if (searchItem instanceof FileRootSearch) {
-
                                 executor.execute(new FileScanRunnable(FileRootSearch.class.cast(searchItem), configuration.getIoconfig().getBufferReaderSize(), configuration.isArchiveScan(), outputMode));
                                 LOGGER.info("file da scansionare = " + searchItem.getPath().toAbsolutePath().toString());
                             }
