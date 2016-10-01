@@ -18,7 +18,7 @@
         <toSearch>.*</toSearch>
       </searchText>
     </fileRoot>-->
-    <directoryRoot rootPath="C:/Users/Alessio/Desktop/archiveonly" printMode="FILENAME">
+    <directoryRoot rootPath="C:/Users/Alessio/Desktop/test" printMode="FILENAME">
       <searchText regex="true" caseSensitive="false">
         <toSearch>.*</toSearch>
       </searchText>
