@@ -135,6 +135,10 @@ public class ScanDirectory extends SimpleFileVisitor<Path> {
                 LOGGER.debug("file scartato = " + file.toAbsolutePath().toString());
                 return true;
             }
+            if (Utils.checkSevenZFile(file)) {
+                LOGGER.debug("file scartato = " + file.toAbsolutePath().toString());
+                return true;
+            }
         }
         return false;
     }

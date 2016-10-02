@@ -24,7 +24,6 @@ import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -91,10 +90,10 @@ public class Searcher {
     private static void initExample(XStream xstream) {
         try {
             List<SearchItem> searchItems = new ArrayList<SearchItem>();
-            ThreadPoolConfig thePoolConfig = new ThreadPoolConfig(5, 30, 5000, Integer.MAX_VALUE);
+            ThreadPoolConfig thePoolConfig = new ThreadPoolConfig(5, 30, 5000, 10000);
             OutputMode mode = null;
             //mode = new OutputCommonFile(Paths.get("outputExample.txt"));
-            //mode=new OutputSeparateFile(Paths.get("outputDir"), "result");
+            //mode= new OutputSeparateFile(Paths.get("outputDir"), "result");
             IOConfig ioconfig = new IOConfig(524288, mode);
             Config config = new Config(true, thePoolConfig, ioconfig, new SearchItems(searchItems));
             Calendar start = new Timestamp(TimeZone.getTimeZone(Timestamp.TIMEZONE));
@@ -105,12 +104,16 @@ public class Searcher {
             DirectoryRootSearch directoryRootSearch = new DirectoryRootSearch(Paths.get(""), new SearchConfig(false, true, "textTest"), timeIntervall, new SearchConfig(false, true, "textFileNameTest"), PrintMode.FILENAME, TimeIntervall.class.cast(timeIntervall.clone()));
             searchItems.add(fileRoot);
             searchItems.add(directoryRootSearch);
-            try (BufferedWriter buff = Files.newBufferedWriter(Paths.get(CONFIGFILE), StandardCharsets.UTF_8,StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-                xstream.toXML(config, buff);
-            } catch (Exception ex) {
-                LOGGER.error(ex.getMessage(), ex);
-            }
+            writeExample(xstream, config);
             LOGGER.info("file di esempio scritto");
+        } catch (Exception ex) {
+            LOGGER.error(ex.getMessage(), ex);
+        }
+    }
+
+    private static void writeExample(XStream xstream, Config config) {
+        try (BufferedWriter buff = Files.newBufferedWriter(Paths.get(CONFIGFILE),StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+            xstream.toXML(config, buff);
         } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
         }
@@ -120,53 +123,81 @@ public class Searcher {
         try {
             Path path = Paths.get(CONFIGFILE);
             if (Files.exists(path) && !Files.isDirectory(path) && Files.isReadable(path)) {
-                Config configuration = null;
-                Object result = null;
-                try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-                    result = xstream.fromXML(reader);
-                } catch (Exception ex) {
-                    LOGGER.error(ex.getMessage(), ex);
-                }
+                Object result = readConfiguration(path, xstream);
                 if (result instanceof Config) {
-                    configuration = Config.class.cast(result);
-                    LOGGER.info("configurazione caricata correttamente");
-                    LOGGER.debug("configurazione attuale = " + configuration);
-                    OutputSeparateFile outputMode = null;
-                    if (configuration.getIoconfig().getOutputMode() instanceof OutputCommonFile) {
-                        OutputCommonFile outputCommonFile = OutputCommonFile.class.cast(configuration.getIoconfig().getOutputMode());
-                        try {
-                            Files.createDirectories(outputCommonFile.getOutputFilePath().getParent());
-                            BufferedOutputStream outputStream = new BufferedOutputStream(Files.newOutputStream(outputCommonFile.getOutputFilePath(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING));
-                            System.setOut(new PrintStream(outputStream));
-                            System.setErr(new PrintStream(outputStream));
-                            LOGGER.info("output redirect to = " + outputCommonFile.getOutputFilePath().toAbsolutePath().toString());
-                        } catch (Exception ex) {
-                            LOGGER.error(ex.getMessage(), ex);
-                        }
-                    } else if (configuration.getIoconfig().getOutputMode() instanceof OutputSeparateFile) {
-                        outputMode = OutputSeparateFile.class.cast(configuration.getIoconfig().getOutputMode());
-                        LOGGER.info("output in file separati");
-                    }
-                    ThreadPoolExecutor executor = new ThreadPoolExecutor(configuration.getPoolConfig().getMinPoolSize(), configuration.getPoolConfig().getMaxPoolSize(), configuration.getPoolConfig().getIdleTimeOut(), TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(configuration.getPoolConfig().getMaxQueueSize()));
-                    for (SearchItem searchItem : configuration.getSearchItems().getSearchItems()) {
-                        try {
-                            if (searchItem instanceof DirectoryRootSearch) {
-                                ScanDirectory scanDirectory = new ScanDirectory(DirectoryRootSearch.class.cast(searchItem), executor, configuration.isArchiveScan(), configuration.getIoconfig().getBufferReaderSize(), outputMode);
-                                Files.walkFileTree(searchItem.getPath(), scanDirectory);
-                            } else if (searchItem instanceof FileRootSearch) {
-                                executor.execute(new FileScanRunnable(FileRootSearch.class.cast(searchItem), configuration.getIoconfig().getBufferReaderSize(), configuration.isArchiveScan(), outputMode));
-                                LOGGER.info("file da scansionare = " + searchItem.getPath().toAbsolutePath().toString());
-                            }
-                        } catch (Exception ex) {
-                            continue;
-                        }
-                    }
-                    executor.shutdown();
+                    elaborateConfiguration(result);
                 } else {
                     LOGGER.error("configurazione non valida");
                 }
             } else {
                 LOGGER.error("file di configurazione non valido");
+            }
+        } catch (Exception ex) {
+            LOGGER.error(ex.getMessage(), ex);
+        }
+    }
+
+    private static void elaborateConfiguration(Object result) {
+        final Config configuration = Config.class.cast(result);
+        LOGGER.info("configurazione caricata correttamente");
+        LOGGER.debug("configurazione attuale = " + configuration);
+        start(configuration, outputMode(configuration));
+    }
+
+    private static OutputSeparateFile outputMode(final Config configuration) {
+        OutputSeparateFile outputMode = null;
+        if (configuration.getIoconfig().getOutputMode() instanceof OutputCommonFile) {
+            outputCommonFile(configuration);
+        } else if (configuration.getIoconfig().getOutputMode() instanceof OutputSeparateFile) {
+            outputMode = outputSeparateFile(configuration);
+        }
+        return outputMode;
+    }
+
+    private static void start(final Config configuration, final OutputSeparateFile outputMode) {
+        final ThreadPoolExecutor executor = new ThreadPoolExecutor(configuration.getPoolConfig().getMinPoolSize(), configuration.getPoolConfig().getMaxPoolSize(), configuration.getPoolConfig().getIdleTimeOut(), TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(configuration.getPoolConfig().getMaxQueueSize()));
+        configuration.getSearchItems().getSearchItems().parallelStream().forEach(searchItem -> searchItempLoopCore(searchItem, executor, configuration, outputMode));
+        executor.shutdown();
+    }
+
+    private static OutputSeparateFile outputSeparateFile(Config configuration) {
+        OutputSeparateFile outputMode;
+        outputMode = OutputSeparateFile.class.cast(configuration.getIoconfig().getOutputMode());
+        LOGGER.info("output in file separati");
+        return outputMode;
+    }
+
+    private static void outputCommonFile(Config configuration) {
+        OutputCommonFile outputCommonFile = OutputCommonFile.class.cast(configuration.getIoconfig().getOutputMode());
+        try {
+            Files.createDirectories(outputCommonFile.getOutputFilePath().getParent());
+            BufferedOutputStream outputStream = new BufferedOutputStream(Files.newOutputStream(outputCommonFile.getOutputFilePath(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING));
+            System.setOut(new PrintStream(outputStream));
+            System.setErr(new PrintStream(outputStream));
+            LOGGER.info("output redirect to = " + outputCommonFile.getOutputFilePath().toAbsolutePath().toString());
+        } catch (Exception ex) {
+            LOGGER.error(ex.getMessage(), ex);
+        }
+    }
+
+    private static Object readConfiguration(Path path, XStream xstream) {
+        Object result = null;
+        try (BufferedReader reader = Files.newBufferedReader(path)) {
+            result = xstream.fromXML(reader);
+        } catch (Exception ex) {
+            LOGGER.error(ex.getMessage(), ex);
+        }
+        return result;
+    }
+
+    private static void searchItempLoopCore(SearchItem searchItem, ThreadPoolExecutor executor, Config configuration, OutputSeparateFile outputMode) {
+        try {
+            if (searchItem instanceof DirectoryRootSearch) {
+                ScanDirectory scanDirectory = new ScanDirectory(DirectoryRootSearch.class.cast(searchItem), executor, configuration.isArchiveScan(), configuration.getIoconfig().getBufferReaderSize(), outputMode);
+                Files.walkFileTree(searchItem.getPath(), scanDirectory);
+            } else if (searchItem instanceof FileRootSearch) {
+                executor.execute(new FileScanRunnable(FileRootSearch.class.cast(searchItem), configuration.getIoconfig().getBufferReaderSize(), configuration.isArchiveScan(), outputMode));
+                LOGGER.info("file da scansionare = " + searchItem.getPath().toAbsolutePath().toString());
             }
         } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);

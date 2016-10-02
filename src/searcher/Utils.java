@@ -14,6 +14,7 @@ import java.io.DataInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
 
@@ -28,68 +29,63 @@ public class Utils {
 
     private static final Logger LOGGER = LogManager.getLogger(Utils.class);
 
+    public static boolean checkSevenZFile(Path file) {
+        boolean result = convertByteToHex(readByteFile(file, 6)).equals(FileSignature.SevenZ.SEVENZHEADER);
+        if (!result) {
+            LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non è 7z");
+        }
+        return result;
+    }
+
     public static boolean checkGzipFile(Path file) {
-        boolean result = false;
-        try (DataInputStream in = new DataInputStream(new BufferedInputStream(Files.newInputStream(file)))) {;
-            int test = in.readShort();
-            result = test == FileSignature.Gzip.GZIPFILEHEADER;
-            if (!result) {
-                LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non è gzip");
-            }
-        } catch (Exception ex) {
+        boolean result = convertByteToHex(readByteFile(file, 2)).equals(FileSignature.Gzip.GZIPFILEHEADER);
+        if (!result) {
             LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non è gzip");
         }
         return result;
     }
 
     public static boolean checkZipFile(Path file) {
-        try (DataInputStream in = new DataInputStream(new BufferedInputStream(Files.newInputStream(file)))) {
-            int test = in.readInt();
-            boolean result = test == FileSignature.Zip.ZIPFILEHEADER;
-            if (!result) {
-                LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non è zip");
-            }
-            return result;
-        } catch (Exception ex) {
+        boolean result = convertByteToHex(readByteFile(file, 4)).equals(FileSignature.Zip.ZIPFILEHEADER);
+        if (!result) {
             LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non è zip");
-            return false;
         }
+        return result;
     }
 
     public static boolean checkRarFile(Path file) {
-        try (DataInputStream in = new DataInputStream(new BufferedInputStream(Files.newInputStream(file)))) {
-            byte data[] = new byte[8];
-            int len = in.read(data);
-            boolean result = (len == 8 && equalsRar(data));
-            if (!result) {
-                LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non è rar");
-            }
-            return result;
-        } catch (Exception ex) {
+        String hex = convertByteToHex(readByteFile(file, 8));
+        boolean result = hex.startsWith(FileSignature.Rar.START_RAR_HEADER_1) || hex.startsWith(FileSignature.Rar.START_RAR_HEADER_2);
+        if (!result) {
             LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non è rar");
-            return false;
-        } 
+        }
+        return result;
     }
 
-    private static boolean equalsRar(byte[] data) {
+    private static byte[] readByteFile(Path file, int byteNumber) {
+        byte[] returnValue = null;
+        try (BufferedInputStream in = new BufferedInputStream(Files.newInputStream(file), byteNumber)) {
+            byte[] tempReturnValue = new byte[byteNumber];
+            int len = in.read(tempReturnValue);
+            if (len > 0) {
+                returnValue = Arrays.copyOf(tempReturnValue, len);
+            }
+        } catch (Exception e) {
+        }
+        return returnValue;
+    }
+
+    private static String convertByteToHex(byte[] byteArr) {
+        StringBuilder builder = new StringBuilder();
         try {
-            if (data.length >= FileSignature.Rar.START_RAR_HEADER.length + 2) {
-                for (int i = 0; i < FileSignature.Rar.START_RAR_HEADER.length; i++) {
-                    if (data[i] != FileSignature.Rar.START_RAR_HEADER[i]) {
-                        return false;
-                    }
-                }
-                if (data[FileSignature.Rar.START_RAR_HEADER.length] == FileSignature.Rar.END_RAR_HEADER1_5TOONWARDS) {
-                    return true;
-                }
-                if (data[FileSignature.Rar.START_RAR_HEADER.length] == FileSignature.Rar.END_RAR_HEADER5_0TOONWARDS[0] && data[FileSignature.Rar.START_RAR_HEADER.length + 1] == FileSignature.Rar.END_RAR_HEADER5_0TOONWARDS[1]) {
-                    return true;
+            if (byteArr != null) {
+                for (byte b : byteArr) {
+                    builder.append(String.format("%02x", b).toUpperCase());
                 }
             }
-        } catch (Exception ex) {
-            return false;
+        } catch (Exception e) {
         }
-        return false;
+        return builder.toString();
     }
 
     public static Pattern regex(SearchConfig config) {
@@ -121,6 +117,5 @@ public class Utils {
         timestamp.setTimeInMillis(fileAttr);
         return new SimpleDateFormat(Timestamp.SDF_FORMAT).format(timestamp.getTime());
     }
-
 
 }

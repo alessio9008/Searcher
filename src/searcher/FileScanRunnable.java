@@ -12,7 +12,6 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -30,7 +29,9 @@ import com.github.junrar.rarfile.FileHeader;
 
 import config.FileRootSearch;
 import config.OutputSeparateFile;
+import custom.SevenZFileExt;
 import java.util.zip.GZIPInputStream;
+import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
 
 /**
  *
@@ -80,6 +81,10 @@ public class FileScanRunnable implements Runnable {
                 LOGGER.info("il file " + fileRootSearch.getPath().toAbsolutePath().toString() + " sara scanzionato come file rar");
                 scanRarFile();
                 return;
+            } else if (Utils.checkSevenZFile(fileRootSearch.getPath())) {
+                LOGGER.info("il file " + fileRootSearch.getPath().toAbsolutePath().toString() + " sara scanzionato come file 7z");
+                scan7ZFile();
+                return;
             }
         }
         LOGGER.info("il file " + fileRootSearch.getPath().toAbsolutePath().toString() + " sarà processato come file di testo");
@@ -103,7 +108,7 @@ public class FileScanRunnable implements Runnable {
             while (fileHeader != null) {
                 try {
                     if (!fileHeader.isDirectory()) {
-                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(archive.getInputStream(fileHeader)), bufferReaderSize)) {
+                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new BufferedInputStream(archive.getInputStream(fileHeader),bufferReaderSize)), bufferReaderSize)) {
                             scanFile(reader);
                         }
                     }
@@ -119,7 +124,7 @@ public class FileScanRunnable implements Runnable {
     }
 
     private void scanTextFile() throws IOException {
-        try (BufferedReader reader = new BufferedReader(Files.newBufferedReader(fileRootSearch.getPath(), StandardCharsets.UTF_8), bufferReaderSize)) {
+        try (BufferedReader reader = new BufferedReader(Files.newBufferedReader(fileRootSearch.getPath()), bufferReaderSize)) {
             scanFile(reader);
         } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
@@ -127,8 +132,26 @@ public class FileScanRunnable implements Runnable {
     }
 
     private void scanGzipFile() throws IOException {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new BufferedInputStream(Files.newInputStream(fileRootSearch.getPath()), bufferReaderSize), bufferReaderSize)), bufferReaderSize)) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new BufferedInputStream(Files.newInputStream(fileRootSearch.getPath()),bufferReaderSize),bufferReaderSize)), bufferReaderSize)) {
             scanFile(reader);
+        } catch (Exception ex) {
+            LOGGER.error(ex.getMessage(), ex);
+        }
+    }
+
+    private void scan7ZFile() {
+        try (SevenZFileExt sevenZFile = new SevenZFileExt(fileRootSearch.getPath().toFile())) {
+            SevenZArchiveEntry entry = sevenZFile.getNextEntry();
+            while (entry != null) {
+                if (!entry.isDirectory()) {
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(new BufferedInputStream(sevenZFile.getInputStream(bufferReaderSize),bufferReaderSize)), bufferReaderSize)) {
+                        scanFile(reader);
+                    } catch (Exception ex) {
+                        LOGGER.error(ex.getMessage(), ex);
+                    }
+                }
+                entry = sevenZFile.getNextEntry();
+            }
         } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
         }
@@ -237,7 +260,7 @@ public class FileScanRunnable implements Runnable {
             try {
                 Files.createDirectories(outputSeparateFile.getDirectoryPathResult());
                 Path file = Files.createTempFile(outputSeparateFile.getDirectoryPathResult(), outputSeparateFile.getPrefix() + "_", "_" + fileRootSearch.getPath().getFileName().toString() + ".txt");
-                BufferedWriter bufferedWriter = Files.newBufferedWriter(file, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                BufferedWriter bufferedWriter = Files.newBufferedWriter(file, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
                 out = new PrintWriter(bufferedWriter);
                 separateFile = true;
                 LOGGER.info("il risultato della ricerca nel file = " + fileRootSearch.getPath().toAbsolutePath().toString() + " verra' scritto nel file = " + file.toAbsolutePath().toString());

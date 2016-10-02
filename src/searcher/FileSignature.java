@@ -13,18 +13,22 @@ public interface FileSignature {
 
     public interface Zip {
 
-        public static final int ZIPFILEHEADER = 0x504b0304;
+        public static final String ZIPFILEHEADER = "504B0304";
     }
 
     public interface Rar {
 
-        public static final byte[] START_RAR_HEADER = {0x52, 0x61, 0x72, 0x21, 0x1A, 0x07};
-        public static final byte END_RAR_HEADER1_5TOONWARDS = 0x00;
-        public static final byte[] END_RAR_HEADER5_0TOONWARDS = {0x01, 0x00};
+        public static final String START_RAR_HEADER_1 = "526172211A0700";
+        public static final String START_RAR_HEADER_2 = "526172211A070100";
 
     }
 
-    public interface Gzip{
-        public static final short GZIPFILEHEADER = 0x1F8B;
+    public interface Gzip {
+
+        public static final String GZIPFILEHEADER = "1F8B";
+    }
+
+    public interface SevenZ {
+        public static final String SEVENZHEADER = "377ABCAF271C";
     }
 }
