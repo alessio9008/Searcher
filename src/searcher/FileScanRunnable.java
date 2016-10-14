@@ -187,7 +187,7 @@ public class FileScanRunnable implements Runnable {
         while (line != null) {
             try {
                 if (counter == limit) {
-                    LOGGER.debug("linea di esempio nÂ° " + counter + " letta dal file = " + fileRootSearch.getPath().toAbsolutePath().toString() + " <=> " + line);
+                    LOGGER.debug("linea di esempio n° " + counter + " letta dal file = " + fileRootSearch.getPath().toAbsolutePath().toString() + " <=> " + line);
                     limit = counter * BASE_PRINT;
                 }
                 counter++;
