@@ -9,17 +9,21 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -30,8 +34,6 @@ import com.github.junrar.rarfile.FileHeader;
 import config.FileRootSearch;
 import config.OutputSeparateFile;
 import custom.SevenZFileExt;
-import java.util.zip.GZIPInputStream;
-import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
 
 /**
  *
@@ -124,7 +126,7 @@ public class FileScanRunnable implements Runnable {
     }
 
     private void scanTextFile() throws IOException {
-        try (BufferedReader reader = new BufferedReader(Files.newBufferedReader(fileRootSearch.getPath()), bufferReaderSize)) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileRootSearch.getPath().toFile()), bufferReaderSize)) {
             scanFile(reader);
         } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
@@ -132,7 +134,7 @@ public class FileScanRunnable implements Runnable {
     }
 
     private void scanGzipFile() throws IOException {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new BufferedInputStream(Files.newInputStream(fileRootSearch.getPath()),bufferReaderSize),bufferReaderSize)), bufferReaderSize)) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new BufferedInputStream(new FileInputStream(fileRootSearch.getPath().toFile()),bufferReaderSize),bufferReaderSize)), bufferReaderSize)) {
             scanFile(reader);
         } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
@@ -158,7 +160,7 @@ public class FileScanRunnable implements Runnable {
     }
 
     private void scanZipFile() throws IOException {
-        try (ZipInputStream zin = new ZipInputStream(new BufferedInputStream(Files.newInputStream(fileRootSearch.getPath()), bufferReaderSize))) {
+        try (ZipInputStream zin = new ZipInputStream(new BufferedInputStream(new FileInputStream(fileRootSearch.getPath().toFile()), bufferReaderSize))) {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(zin), bufferReaderSize)) {
                 ZipEntry ze = zin.getNextEntry();
                 while (ze != null) {
@@ -260,7 +262,7 @@ public class FileScanRunnable implements Runnable {
             try {
                 Files.createDirectories(outputSeparateFile.getDirectoryPathResult());
                 Path file = Files.createTempFile(outputSeparateFile.getDirectoryPathResult(), outputSeparateFile.getPrefix() + "_", "_" + fileRootSearch.getPath().getFileName().toString() + ".txt");
-                BufferedWriter bufferedWriter = Files.newBufferedWriter(file, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file.toFile(),false));
                 out = new PrintWriter(bufferedWriter);
                 separateFile = true;
                 LOGGER.info("il risultato della ricerca nel file = " + fileRootSearch.getPath().toAbsolutePath().toString() + " verra' scritto nel file = " + file.toAbsolutePath().toString());

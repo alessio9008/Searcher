@@ -5,7 +5,30 @@
  */
 package searcher;
 
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+import java.util.TimeZone;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.thoughtworks.xstream.XStream;
+
 import config.Config;
 import config.DirectoryRootSearch;
 import config.FileRootSearch;
@@ -20,23 +43,6 @@ import config.SearchItems;
 import config.ThreadPoolConfig;
 import config.TimeIntervall;
 import custom.Timestamp;
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.PrintStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-import java.util.TimeZone;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 /**
  *
@@ -112,7 +118,7 @@ public class Searcher {
     }
 
     private static void writeExample(XStream xstream, Config config) {
-        try (BufferedWriter buff = Files.newBufferedWriter(Paths.get(CONFIGFILE),StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+        try (BufferedWriter buff = new BufferedWriter(new FileWriter(Paths.get(CONFIGFILE).toFile(),false))) {
             xstream.toXML(config, buff);
         } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
@@ -171,7 +177,7 @@ public class Searcher {
         OutputCommonFile outputCommonFile = OutputCommonFile.class.cast(configuration.getIoconfig().getOutputMode());
         try {
             Files.createDirectories(outputCommonFile.getOutputFilePath().getParent());
-            BufferedOutputStream outputStream = new BufferedOutputStream(Files.newOutputStream(outputCommonFile.getOutputFilePath(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING));
+            BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(outputCommonFile.getOutputFilePath().toFile(),false));
             System.setOut(new PrintStream(outputStream));
             System.setErr(new PrintStream(outputStream));
             LOGGER.info("output redirect to = " + outputCommonFile.getOutputFilePath().toAbsolutePath().toString());
@@ -182,7 +188,7 @@ public class Searcher {
 
     private static Object readConfiguration(Path path, XStream xstream) {
         Object result = null;
-        try (BufferedReader reader = Files.newBufferedReader(path)) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(path.toFile()))) {
             result = xstream.fromXML(reader);
         } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);

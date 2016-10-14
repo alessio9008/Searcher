@@ -5,13 +5,8 @@
  */
 package searcher;
 
-import config.SearchConfig;
-import config.TimeIntervall;
-import custom.Timestamp;
-
 import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.nio.file.Files;
+import java.io.FileInputStream;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -20,6 +15,10 @@ import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import config.SearchConfig;
+import config.TimeIntervall;
+import custom.Timestamp;
 
 /**
  *
@@ -32,7 +31,7 @@ public class Utils {
     public static boolean checkSevenZFile(Path file) {
         boolean result = convertByteToHex(readByteFile(file, 6)).equals(FileSignature.SevenZ.SEVENZHEADER);
         if (!result) {
-            LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non Ã¨ 7z");
+            LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non è 7z");
         }
         return result;
     }
@@ -40,7 +39,7 @@ public class Utils {
     public static boolean checkGzipFile(Path file) {
         boolean result = convertByteToHex(readByteFile(file, 2)).equals(FileSignature.Gzip.GZIPFILEHEADER);
         if (!result) {
-            LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non Ã¨ gzip");
+            LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non è gzip");
         }
         return result;
     }
@@ -48,7 +47,7 @@ public class Utils {
     public static boolean checkZipFile(Path file) {
         boolean result = convertByteToHex(readByteFile(file, 4)).equals(FileSignature.Zip.ZIPFILEHEADER);
         if (!result) {
-            LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non Ã¨ zip");
+            LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non è zip");
         }
         return result;
     }
@@ -57,14 +56,14 @@ public class Utils {
         String hex = convertByteToHex(readByteFile(file, 8));
         boolean result = hex.startsWith(FileSignature.Rar.START_RAR_HEADER_1) || hex.startsWith(FileSignature.Rar.START_RAR_HEADER_2);
         if (!result) {
-            LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non Ã¨ rar");
+            LOGGER.error("il file = " + file.toAbsolutePath().toString() + " non è rar");
         }
         return result;
     }
 
     private static byte[] readByteFile(Path file, int byteNumber) {
         byte[] returnValue = null;
-        try (BufferedInputStream in = new BufferedInputStream(Files.newInputStream(file), byteNumber)) {
+        try (BufferedInputStream in = new BufferedInputStream(new FileInputStream(file.toFile()), byteNumber)) {
             byte[] tempReturnValue = new byte[byteNumber];
             int len = in.read(tempReturnValue);
             if (len > 0) {
