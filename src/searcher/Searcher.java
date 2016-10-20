@@ -177,9 +177,9 @@ public class Searcher {
         OutputCommonFile outputCommonFile = OutputCommonFile.class.cast(configuration.getIoconfig().getOutputMode());
         try {
             Files.createDirectories(outputCommonFile.getOutputFilePath().getParent());
-            BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(outputCommonFile.getOutputFilePath().toFile(),false));
-            System.setOut(new PrintStream(outputStream));
-            System.setErr(new PrintStream(outputStream));
+            PrintStream outputStream = new PrintStream(new BufferedOutputStream(new FileOutputStream(outputCommonFile.getOutputFilePath().toFile(),false)));
+            System.setOut(outputStream);
+            System.setErr(outputStream);
             LOGGER.info("output redirect to = " + outputCommonFile.getOutputFilePath().toAbsolutePath().toString());
         } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
