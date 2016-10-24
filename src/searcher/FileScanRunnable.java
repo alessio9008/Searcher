@@ -262,8 +262,7 @@ public class FileScanRunnable implements Runnable {
             try {
                 Files.createDirectories(outputSeparateFile.getDirectoryPathResult());
                 Path file = Files.createTempFile(outputSeparateFile.getDirectoryPathResult(), outputSeparateFile.getPrefix() + "_", "_" + fileRootSearch.getPath().getFileName().toString() + ".txt");
-                BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file.toFile(),false));
-                out = new PrintWriter(bufferedWriter);
+                out = new PrintWriter(new BufferedWriter(new FileWriter(file.toFile(),false)));
                 separateFile = true;
                 LOGGER.info("il risultato della ricerca nel file = " + fileRootSearch.getPath().toAbsolutePath().toString() + " verra' scritto nel file = " + file.toAbsolutePath().toString());
             } catch (Exception ex) {

@@ -47,6 +47,7 @@ public class SevenZFileExt extends SevenZFile {
                             LOGGER.error(ex.getMessage(), ex);
                         }
                     }
+                    out.flush();
                 } catch (Exception e) {
                     LOGGER.error(e.getMessage(), e);
                 } finally {

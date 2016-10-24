@@ -120,6 +120,7 @@ public class Searcher {
     private static void writeExample(XStream xstream, Config config) {
         try (BufferedWriter buff = new BufferedWriter(new FileWriter(Paths.get(CONFIGFILE).toFile(),false))) {
             xstream.toXML(config, buff);
+            buff.flush();
         } catch (Exception ex) {
             LOGGER.error(ex.getMessage(), ex);
         }
