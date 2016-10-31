@@ -23,6 +23,7 @@ import java.util.TimeZone;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -66,15 +67,29 @@ public class Searcher {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
+    	AtomicLong numberLinesFound=new AtomicLong(0);
+    	timestampStartAndEnd(numberLinesFound);
         LOGGER.info("configuration fileName = " + CONFIGFILE);
         XStream xstream = initXstream();
         if (args.length > 0) {
             initExample(xstream);
         } else {
-            start(xstream);
+            start(xstream,numberLinesFound);
         }
 
     }
+
+	private static void timestampStartAndEnd(AtomicLong numberLinesFound) {
+		final PrintStream stdOut=System.out;
+    	String print=String.format("START TIME %s\n",Utils.convertStringTime(System.currentTimeMillis()));
+		stdOut.print(print);
+		LOGGER.info(print);
+    	Runtime.getRuntime().addShutdownHook(new Thread(() ->{
+    		String print2=String.format("END TIME %s, number lines found %d\n",Utils.convertStringTime(System.currentTimeMillis()),numberLinesFound.longValue());
+    		stdOut.print(print2);
+    		LOGGER.info(print2);
+    	}));
+	}
 
     private static XStream initXstream() {
         XStream xstream = new XStream();
@@ -126,13 +141,13 @@ public class Searcher {
         }
     }
 
-    private static void start(XStream xstream) {
+    private static void start(XStream xstream, AtomicLong numberLinesFound) {
         try {
             Path path = Paths.get(CONFIGFILE);
             if (Files.exists(path) && !Files.isDirectory(path) && Files.isReadable(path)) {
                 Object result = readConfiguration(path, xstream);
                 if (result instanceof Config) {
-                    elaborateConfiguration(result);
+                    elaborateConfiguration(result,numberLinesFound);
                 } else {
                     LOGGER.error("configurazione non valida");
                 }
@@ -144,11 +159,11 @@ public class Searcher {
         }
     }
 
-    private static void elaborateConfiguration(Object result) {
+    private static void elaborateConfiguration(Object result, AtomicLong numberLinesFound) {
         final Config configuration = Config.class.cast(result);
         LOGGER.info("configurazione caricata correttamente");
         LOGGER.debug("configurazione attuale = " + configuration);
-        start(configuration, outputMode(configuration));
+        start(configuration, outputMode(configuration),numberLinesFound);
     }
 
     private static OutputSeparateFile outputMode(final Config configuration) {
@@ -161,9 +176,9 @@ public class Searcher {
         return outputMode;
     }
 
-    private static void start(final Config configuration, final OutputSeparateFile outputMode) {
+    private static void start(final Config configuration, final OutputSeparateFile outputMode, AtomicLong numberLinesFound) {
         final ThreadPoolExecutor executor = new ThreadPoolExecutor(configuration.getPoolConfig().getMinPoolSize(), configuration.getPoolConfig().getMaxPoolSize(), configuration.getPoolConfig().getIdleTimeOut(), TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(configuration.getPoolConfig().getMaxQueueSize()));
-        configuration.getSearchItems().getSearchItems().parallelStream().forEach(searchItem -> searchItempLoopCore(searchItem, executor, configuration, outputMode));
+        configuration.getSearchItems().getSearchItems().parallelStream().forEach(searchItem -> searchItempLoopCore(searchItem, executor, configuration, outputMode,numberLinesFound));
         executor.shutdown();
     }
 
@@ -197,13 +212,13 @@ public class Searcher {
         return result;
     }
 
-    private static void searchItempLoopCore(SearchItem searchItem, ThreadPoolExecutor executor, Config configuration, OutputSeparateFile outputMode) {
+    private static void searchItempLoopCore(SearchItem searchItem, ThreadPoolExecutor executor, Config configuration, OutputSeparateFile outputMode, AtomicLong numberLinesFound) {
         try {
             if (searchItem instanceof DirectoryRootSearch) {
-                ScanDirectory scanDirectory = new ScanDirectory(DirectoryRootSearch.class.cast(searchItem), executor, configuration.isArchiveScan(), configuration.getIoconfig().getBufferReaderSize(), outputMode);
+                ScanDirectory scanDirectory = new ScanDirectory(DirectoryRootSearch.class.cast(searchItem), executor, configuration.isArchiveScan(), configuration.getIoconfig().getBufferReaderSize(), outputMode,numberLinesFound);
                 Files.walkFileTree(searchItem.getPath(), scanDirectory);
             } else if (searchItem instanceof FileRootSearch) {
-                executor.execute(new FileScanRunnable(FileRootSearch.class.cast(searchItem), configuration.getIoconfig().getBufferReaderSize(), configuration.isArchiveScan(), outputMode));
+                executor.execute(new FileScanRunnable(FileRootSearch.class.cast(searchItem), configuration.getIoconfig().getBufferReaderSize(), configuration.isArchiveScan(), outputMode,numberLinesFound));
                 LOGGER.info("file da scansionare = " + searchItem.getPath().toAbsolutePath().toString());
             }
         } catch (Exception ex) {

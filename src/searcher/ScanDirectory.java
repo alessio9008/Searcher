@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.logging.log4j.LogManager;
@@ -32,13 +33,15 @@ public class ScanDirectory extends SimpleFileVisitor<Path> {
     private ThreadPoolExecutor executor;
     private int bufferSize;
     private OutputSeparateFile outputSeparateFile;
+    private AtomicLong numberLinesFound;
 
-    public ScanDirectory(DirectoryRootSearch directoryRootSearch, ThreadPoolExecutor executor, boolean archiveScan, int bufferSize, OutputSeparateFile outputSeparateFile) {
+    public ScanDirectory(DirectoryRootSearch directoryRootSearch, ThreadPoolExecutor executor, boolean archiveScan, int bufferSize, OutputSeparateFile outputSeparateFile, AtomicLong numberLinesFound) {
         this.rootSearch = directoryRootSearch;
         this.executor = executor;
         this.archiveScan = archiveScan;
         this.bufferSize = bufferSize;
         this.outputSeparateFile = outputSeparateFile;
+        this.numberLinesFound=numberLinesFound;
     }
 
     @Override
@@ -71,7 +74,7 @@ public class ScanDirectory extends SimpleFileVisitor<Path> {
 
     private void putFile(Path file) throws InterruptedException {
         FileRootSearch fileRoot = new FileRootSearch(file, rootSearch.getSearchText(), rootSearch.getPrintMode());
-        executor.execute(new FileScanRunnable(fileRoot, bufferSize, archiveScan, outputSeparateFile));
+        executor.execute(new FileScanRunnable(fileRoot, bufferSize, archiveScan, outputSeparateFile,numberLinesFound));
         LOGGER.info("file da scansionare = " + file.toAbsolutePath().toString());
     }
 
